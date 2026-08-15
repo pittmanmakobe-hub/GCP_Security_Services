@@ -1,0 +1,38 @@
+name: gcp-wif-demo
+
+# Demonstrates GCP authentication via Workload Identity Federation — no
+# service account JSON key anywhere in this repo or in GitHub Secrets.
+# Requires terraform/baselines/gcp to have been applied first (Lab 5.4),
+# and the two repo variables below set to its outputs:
+#   GCP_WORKLOAD_IDENTITY_PROVIDER = output.workload_identity_provider
+#   GCP_SERVICE_ACCOUNT            = output.gha_service_account_email
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write   # required to mint the OIDC token WIF exchanges
+  contents: read
+
+jobs:
+  gcp-auth-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Prove read-only access, no keys involved
+        run: |
+          gcloud auth list
+          gcloud storage ls || true
